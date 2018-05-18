@@ -1,0 +1,250 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-ajax/core-ajax.html">
+<link rel="import" href="../bower_components/core-item/core-item.html">
+<link rel="import" href="../bower_components/core-collapse/core-collapse.html">
+
+
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/paper-ripple/paper-ripple.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner.html">
+<link rel="import" href="../bower_components/paper-interval-slider/paper-interval-slider.html">
+
+<polymer-element name="g-filtermanager" attributes="map filters ">
+<template>
+<style>
+core-collapse {
+    background: rgba(225,225,230,0.4);
+    -webkit-box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+    -moz-box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+    box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+}
+.filter {
+   background: rgba(225,225,230,0.4);
+    -webkit-box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+    -moz-box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+    box-shadow: inset 0px 2px 5px 0px rgba(161,161,161,0.62);
+    margin: 8px;
+
+    border-radius: 2px;
+border: solid 1px rgb(20,20,20);
+}
+paper-checkbox {
+    margin-right: 5px;
+}
+.filterinfo {
+    margin:5px;
+}
+
+
+.uit {
+    opacity: 0.5;
+}
+
+.label-icon-number {
+    background-color: #6eafff;
+    display: inline-block;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 14px;
+    border-radius: 50%;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 33px;
+    box-shadow: 0px 0px 0px 5px rgba(255,255,255,0.3);
+}
+
+.label-icon-number-lg {
+    background-color: #6eafff;
+    display: inline-block;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 14px;
+    border-radius: 50%;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 41px;
+    box-shadow: 0px 0px 0px 5px rgba(255,255,255,0.3);
+}
+
+.label-icon-text {
+    display: inline-block;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    text-align: center;
+    vertical-align: middle;
+    text-shadow: 0px 1px 1px #232323;
+    color: #ebf9f5;
+}
+
+/*.label-icon-text:hover {*/
+    /*color: #EDB229;*/
+/*}*/
+
+.label-icon-text-selected {
+    color: #d9534f;
+}
+
+.label-icon-number-selected {
+    box-shadow: 0px 0px 0px 7px rgba(255,140,0,0.6);
+}
+</style>
+<style shim-shadowdom>
+  paper-spinner.white::shadow .circle {
+    border-color: #fff;
+  }
+</style>
+<div class="container">
+<template id="filterList" repeat="{{l in filters}}">
+   <div class="layer">
+        </core-item>
+            <div class="filters">
+              <template repeat="{{f in l.options.config.filters}}">
+              <div class="filter">
+             <core-item icon="arrow-drop-down" label="{{f.displayname}}" on-click="{{toggle}}"><paper-ripple fit></paper-ripple><span flex></span><paper-checkbox checked="{{f.enabled}}" on-click="{{stop}}" on-core-change="{{toggleFilter}}"></paper-checkbox></core-item>
+              <core-collapse>
+              <div class="filterinfo">filter between {{f.a}} and {{f.b}} {{f.unit}}</div>
+             <paper-interval-slider pin valuea="{{f.a}}" valueb="{{f.b}}" min="{{f.min}}" max="{{f.max}}" step="{{f.step||1}}" on-change="{{filterChange}}"></paper-interval-slider><span on-click="{{reset}}" style="cursor:pointer">reset</span>
+             </core-collapse>
+             </div>
+              </template>
+            </div>
+    </div>
+</template>
+</div>
+</template>
+<script>
+
+Polymer({
+    filters: null,    
+    toggle: function(e) {
+        var visible = e.target.parentElement.icon=="arrow-drop-down";
+        e.target.parentElement.icon=visible?"arrow-drop-up":"arrow-drop-down";
+        e.target.parentElement.nextElementSibling.toggle();
+        if(visible) {
+             e.target.parentElement.nextElementSibling.style.opacity = 1;            
+            if(e.target.nextElementSibling) e.target.nextElementSibling.nextElementSibling.checked = true;
+        }        
+    },
+    stop: function(a,b,c){
+        a.stopPropagation();
+    },
+    toggleFilter: function(a,b,c){
+        var layer = c.templateInstance.model.l;
+        this.updateFilters(layer);
+    },
+    toggleOpac: function(a,b,c){
+        if(a.target.disabled) return false;
+        var layer = c.templateInstance.model.l;
+        
+        layer.setOpacity(layer.options.config.isFilter?1:0);
+        this.updateFilters(layer)
+    },
+    reset: function(a,b,c) {
+         var f = c.templateInstance.model.f;
+         f.a = f.min;
+         f.b = f.max;
+         var layer = c.templateInstance.model.l;
+        this.updateFilters(layer)
+    },
+    updateFilters: function(layer) {
+        var self = this;
+        var filters = layer.options.config.filters;
+        for(var i = 0; i< filters.length; i++){
+            if(!filters[i].b)filters[i].b = filters[i].max;
+           
+        }
+        function colorize(f,filters) {
+            var show = true;        
+            for(var i = 0; i< filters.length; i++){
+                if(filters[i].enabled){
+                    if((f[filters[i].attribute]>=filters[i].a&&f[filters[i].attribute]<=filters[i].b)==false) show = false;
+                }
+            };
+            return show?'rgba(255,140,0,0.1)':'rgba(255,255,255,01)';
+        }
+        function colorizeline(f,filters) {
+            var show = true;        
+            for(var i = 0; i< filters.length; i++){
+                if(filters[i].enabled){
+                    if((f[filters[i].attribute]>=filters[i].a&&f[filters[i].attribute]<=filters[i].b)==false) show = false;
+                }
+            };
+            return show?{color: 'rgba(255,140,0,1)',size: 1}:{color: 'rgba(255,255,255,1)',size: 0};
+        }
+        var s = function (feature,filters) {
+            
+            var style = {};
+
+            var type = feature.type;
+            switch (type) {
+              case 1: //'Point'
+                style.color = 'rgba(49,79,79,1)';
+                style.radius = 5;
+                style.selected = {
+                  color: 'rgba(255,255,0,0.5)',
+                  radius: 6
+                };
+                break;
+              case 2: //'LineString'
+                style.color = 'rgba(161,217,155,0.8)';
+                style.size = 3;
+                style.selected = {
+                  color: 'rgba(255,25,0,0.5)',
+                  size: 4
+                };
+                break;
+              case 3: //'Polygon'
+                style.color = colorize(feature.properties,filters);
+
+                style.outline = colorizeline(feature.properties,filters);
+                
+                break;
+            }
+            
+            return style;
+        }
+        layer.setStyle(function(f){
+            return s(f,filters);
+        });
+    },    
+    toggleVis: function(e){
+        e.stopPropagation();
+        var visible = !e.target.checked;
+        if(visible) {
+            e.target.parentElement.nextElementSibling.style.opacity = 1;
+             for(var i =0;i<this.filters.length;i++) {
+                this.map.addLayer(this.filters[i].setZIndex(1000+i));
+                this.filters[i].on('loading',function(f){
+                    this.loading = true;
+                });
+                this.filters[i].on('load',function(f){
+                    this.loading = false;
+                });
+            }
+        }
+        else {
+            e.target.parentElement.nextElementSibling.style.opacity = 0.3;
+             for(var i =0;i<this.filters.length;i++) {
+                this.map.removeLayer(this.filters[i]);
+                 this.filters[i].off('loading',function(f){
+                    this.loading = true;
+                });
+                this.filters[i].off('load',function(f){
+                    this.loading = false;
+                });
+            }
+        }
+    },    
+    filterChange: function(a,b,c){
+        var layer = c.templateInstance.model.l;
+        this.updateFilters(layer);
+    },
+    ready: function(){
+        
+        
+    }    
+});
+</script>
+</polymer-element>

@@ -1,0 +1,131 @@
+(function () {
+
+var min = 50;
+var debug = {};
+
+ map = L.map('map').setView([52.342, 4.91], 14);
+// replace "toner" here with "terrain" or "watercolor"
+var layer = new L.StamenTileLayer("toner-lite");
+
+map.addLayer(layer);
+var s = function (feature) {
+    
+    var style = {};
+
+    var type = feature.type;
+    switch (type) {
+      case 1: //'Point'
+        style.color = 'rgba(49,79,79,1)';
+        style.radius = 5;
+        style.selected = {
+          color: 'rgba(255,255,0,0.5)',
+          radius: 6
+        };
+        break;
+      case 2: //'LineString'
+        style.color = 'rgba(161,217,155,0.8)';
+        style.size = 3;
+        style.selected = {
+          color: 'rgba(255,25,0,0.5)',
+          size: 4
+        };
+        break;
+      case 3: //'Polygon'
+        style.color = colorize(feature.properties);
+        style.outline = {
+          color: strokeColor,
+          size: 1
+        };
+        style.selected = {
+          color: 'rgba(255,140,0,1)',
+          outline: {
+            color: 'rgba(255,140,0,1)',
+            size: 2
+          }
+        };
+        break;
+    }
+    style.staticLabel = function() {
+                  var style = {
+                    html: feature.properties.bu_naam,
+                    iconSize: [125,30],
+                    cssClass: 'label-icon-text'
+                  };
+                  return style;
+                };
+    return style;
+}
+
+  
+  
+ mvtSource = new L.TileLayer.MVTSource({
+  url: "http://192.168.40.10:3389/services/vector-tiles/buurtemTiles/{z}/{x}/{y}.pbf",
+  //debug: true,
+  clickableLayers: ["buurten"],
+  getIDForLayerFeature: function(feature) {
+    return feature.properties.serial;
+  },
+
+  /**
+   * The filter function gets called when iterating though each vector tile feature (vtf). You have access
+   * to every property associated with a given feature (the feature, and the layer). You can also filter
+   * based of the context (each tile that the feature is drawn onto).
+   *
+   * Returning false skips over the feature and it is not drawn.
+   *
+   * @param feature
+   * @returns {boolean}
+   */
+  filter: function(feature, context) {
+    if (feature.layer.name === 'buurten') {
+      return true;//feature.properties.p_ongehuwd < min;
+      
+    }
+    return false;
+  },
+
+  style: s
+
+});
+
+function colorize(f) {
+       if(f.p_ongehuwd > min) return 'rgba(0,0,0,0)';           
+       var d = f.p_ongehuwd;
+     return d > 100 ? '#800026' :
+           d > 50  ? '#BD0026' :
+           d > 20  ? '#E31A1C' :
+           d > 10  ? '#FC4E2A' :
+           d > 5   ? '#FD8D3C' :
+           d > 2   ? '#FEB24C' :
+           d > 1   ? '#FED976' :
+                      '#FFEDA0';
+}
+//debug.mvtSource = mvtSource;
+
+//Globals that we can change later.
+var fillColor = 'rgba(149,139,255,0.4)';
+var strokeColor = 'rgba(20,20,20,0.1)';
+
+//Add layer
+map.addLayer(mvtSource);
+
+
+function get(id) {
+    return document.getElementById(id);
+}
+ 
+
+function updateValues() {
+    min = parseInt(get('min').value);
+    document.getElementById('minveld').setAttribute('value',min);
+    mvtSource.setStyle(s)
+    
+}
+[].forEach.call(document.querySelectorAll('#sidepanel input'), function (input) {
+    input['onchange'] = function (e) {
+        updateValues();
+        needsRedraw = true;
+    };
+}); 
+
+})();

@@ -1,0 +1,24 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+
+<polymer-element name="my-element" noscript>
+  <template>
+  <style>
+  .show {
+    border: solid 1px red;
+    width: 400px;
+    height: 200px;
+    background: grey;
+  }
+  </style>
+    <div class="show" draggable="true" on-dragstart='{{dragstart}}'  >
+    bla</div>
+  </template>
+  <script>
+  Polymer({
+    dragstart: function(e){
+        e.dataTransfer.setData('Text', 'test');
+    }
+  });
+  </script>
+</polymer-element>
